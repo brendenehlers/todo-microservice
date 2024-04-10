@@ -1,33 +1,81 @@
 package http
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/brendenehlers/todo-microservice"
 )
 
-func CreateHTTPServer(todos todo.TodoRepository) *HttpServer {
-	return &HttpServer{
-		todos: todos,
+type HTTPServerConfig struct {
+	Addr string
+	Repo todo.TodoRepository
+	Ctx  context.Context
+	Log  todo.Logger
+}
+
+func CreateHTTPServer(config *HTTPServerConfig) (*HttpServer, error) {
+	if config.Repo == nil {
+		return nil, fmt.Errorf("config.todoRepo == nil")
 	}
+	if config.Log == nil {
+		return nil, fmt.Errorf("config.log == nil")
+	}
+
+	if config.Ctx == nil {
+		config.Ctx = context.Background()
+	}
+	if config.Addr == "" {
+		config.Addr = ":8080"
+	}
+
+	handler := http.NewServeMux()
+	server := &HttpServer{
+		Server: http.Server{
+			Addr:    config.Addr,
+			Handler: handler,
+		},
+		repo: config.Repo,
+		ctx:  config.Ctx,
+		log:  config.Log,
+	}
+
+	handler.HandleFunc("POST /todo", server.handleCreateTodo)
+	handler.HandleFunc("GET /todo/{todoId}", server.handleGetTodo)
+	handler.HandleFunc("PUT /todo/{todoId}", server.handleUpdateTodo)
+	handler.HandleFunc("DELETE /todo/{todoId}", server.handleDeleteTodo)
+
+	return server, nil
 }
 
 type HttpServer struct {
-	todos todo.TodoRepository
+	http.Server
+	repo todo.TodoRepository
+	ctx  context.Context
+	log  todo.Logger
 }
 
-func (*HttpServer) HandleCreateTodo(w http.ResponseWriter, r *http.Request) {
+func (*HttpServer) Run() {
 	panic("not implemented")
 }
 
-func (*HttpServer) HandleGetTodo(w http.ResponseWriter, r *http.Request) {
+func (*HttpServer) Stop() {
 	panic("not implemented")
 }
 
-func (*HttpServer) HandleUpdateTodo(w http.ResponseWriter, r *http.Request) {
+func (*HttpServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
 	panic("not implemented")
 }
 
-func (*HttpServer) HandleDeleteTodo(w http.ResponseWriter, r *http.Request) {
+func (*HttpServer) handleGetTodo(w http.ResponseWriter, r *http.Request) {
+	panic("not implemented")
+}
+
+func (*HttpServer) handleUpdateTodo(w http.ResponseWriter, r *http.Request) {
+	panic("not implemented")
+}
+
+func (*HttpServer) handleDeleteTodo(w http.ResponseWriter, r *http.Request) {
 	panic("not implemented")
 }

@@ -2,6 +2,12 @@ package memory
 
 import "github.com/brendenehlers/todo-microservice"
 
+func New() *InMemoryTodoRepository {
+	return &InMemoryTodoRepository{
+		todos: make(map[string]*todo.Todo),
+	}
+}
+
 type InMemoryTodoRepository struct {
 	todos map[string]*todo.Todo
 }
