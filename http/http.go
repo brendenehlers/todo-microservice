@@ -2,10 +2,17 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/brendenehlers/todo-microservice"
+)
+
+const (
+	REQUEST_TIMEOUT = time.Millisecond * 200
 )
 
 type HTTPServerConfig struct {
@@ -34,10 +41,12 @@ func CreateHTTPServer(config *HTTPServerConfig) (*HttpServer, error) {
 	server := &HttpServer{
 		Server: http.Server{
 			Addr:    config.Addr,
-			Handler: handler,
+			Handler: RequestLogger(config.Log, handler),
+			BaseContext: func(l net.Listener) context.Context {
+				return config.Ctx
+			},
 		},
 		repo: config.Repo,
-		ctx:  config.Ctx,
 		log:  config.Log,
 	}
 
@@ -52,20 +61,75 @@ func CreateHTTPServer(config *HTTPServerConfig) (*HttpServer, error) {
 type HttpServer struct {
 	http.Server
 	repo todo.TodoRepository
-	ctx  context.Context
 	log  todo.Logger
 }
 
-func (*HttpServer) Run() {
-	panic("not implemented")
+type serverResponse struct {
+	Message string      `json:"message,omitempty"`
+	Value   interface{} `json:"value,omitempty"`
+	Error   string      `json:"error,omitempty"`
+}
+
+func (s *HttpServer) Run() {
+	s.log.Info(fmt.Sprintf("Server running on %s", s.Addr))
+	s.ListenAndServe()
 }
 
 func (*HttpServer) Stop() {
 	panic("not implemented")
 }
 
-func (*HttpServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
-	panic("not implemented")
+func (s *HttpServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		val *todo.Todo
+		err error
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), REQUEST_TIMEOUT)
+	defer cancel()
+	respch := make(chan response)
+
+	var newTodo todo.NewTodo
+	json.NewDecoder(r.Body).Decode(&newTodo)
+	defer r.Body.Close()
+
+	go func() {
+		todo, err := s.repo.CreateTodo(&newTodo)
+		respch <- response{
+			val: todo,
+			err: err,
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		s.log.Error("request timed out")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Add("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(serverResponse{
+			Error: "request timed out",
+		})
+		return
+	case resp := <-respch:
+		if resp.err != nil {
+			s.log.Error(resp.err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Header().Add("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(serverResponse{
+				Error: resp.err.Error(),
+			})
+			return
+		}
+
+		s.log.Info("Successfully created todo")
+
+		w.Header().Add("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(serverResponse{
+			Message: "Successfully created todo",
+			Value:   &resp.val,
+		})
+		return
+	}
 }
 
 func (*HttpServer) handleGetTodo(w http.ResponseWriter, r *http.Request) {

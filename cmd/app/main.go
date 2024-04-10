@@ -4,18 +4,19 @@ import (
 	"context"
 
 	"github.com/brendenehlers/todo-microservice/http"
-	"github.com/brendenehlers/todo-microservice/logger"
 	"github.com/brendenehlers/todo-microservice/memory"
+	"github.com/brendenehlers/todo-microservice/slogger"
 )
 
 func main() {
-	log := &logger.Logger{}
-	repo := memory.New()
+	log := &slogger.Slogger{}
+	repo := memory.New(log)
 
+	ctx := context.Background()
 	server, _ := http.CreateHTTPServer(&http.HTTPServerConfig{
 		Addr: ":8080",
 		Repo: repo,
-		Ctx:  context.Background(),
+		Ctx:  ctx,
 		Log:  log,
 	})
 
