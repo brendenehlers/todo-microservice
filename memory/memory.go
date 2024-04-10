@@ -48,14 +48,19 @@ func (r *InMemoryTodoRepository) GetTodo(id int) (*todo.Todo, error) {
 	return todo, nil
 }
 
-func (r *InMemoryTodoRepository) UpdateTodo(todo *todo.Todo) (*todo.Todo, error) {
-	if _, ok := r.todos[todo.Id]; !ok {
+func (r *InMemoryTodoRepository) UpdateTodo(id int, todo *todo.Todo) (*todo.Todo, error) {
+	if _, ok := r.todos[id]; !ok {
 		return nil, fmt.Errorf("todo with given id does not exist")
 	}
 
-	r.todos[todo.Id] = todo
+	r.todos[id].Done = todo.Done
+	if todo.Done {
+		r.todos[id].DoneAt = time.Now()
+	}
+	r.todos[id].Description = todo.Description
+	r.todos[id].UpdatedAt = time.Now()
 
-	return todo, nil
+	return r.todos[id], nil
 }
 
 func (r *InMemoryTodoRepository) DeleteTodo(id int) error {

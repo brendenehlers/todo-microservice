@@ -24,6 +24,7 @@ func RequestLogger(log todo.Logger, handler http.Handler) http.Handler {
 	return http.HandlerFunc(fn)
 }
 
+// TODO finish this
 func RequestTimeout(timeout time.Duration, handler http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), timeout)

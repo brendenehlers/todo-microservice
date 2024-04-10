@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/brendenehlers/todo-microservice"
@@ -70,6 +72,11 @@ type serverResponse struct {
 	Error   string      `json:"error,omitempty"`
 }
 
+type response struct {
+	val *todo.Todo
+	err error
+}
+
 func (s *HttpServer) Run() {
 	s.log.Info(fmt.Sprintf("Server running on %s", s.Addr))
 	s.ListenAndServe()
@@ -80,66 +87,183 @@ func (*HttpServer) Stop() {
 }
 
 func (s *HttpServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
-	type response struct {
-		val *todo.Todo
-		err error
+	var newTodo todo.NewTodo
+	err := decodeRequestBody(r.Body, &newTodo)
+	if err != nil {
+		s.requestError(w, err)
+		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), REQUEST_TIMEOUT)
-	defer cancel()
-	respch := make(chan response)
-
-	var newTodo todo.NewTodo
-	json.NewDecoder(r.Body).Decode(&newTodo)
-	defer r.Body.Close()
-
-	go func() {
+	ctx, cancel, respch := processWithTimeout(r.Context(), func(respch chan response) {
 		todo, err := s.repo.CreateTodo(&newTodo)
 		respch <- response{
 			val: todo,
 			err: err,
 		}
-	}()
+	})
+	defer cancel()
 
 	select {
 	case <-ctx.Done():
-		s.log.Error("request timed out")
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Add("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(serverResponse{
-			Error: "request timed out",
-		})
+		s.requestTimeout(w)
 		return
 	case resp := <-respch:
 		if resp.err != nil {
-			s.log.Error(resp.err.Error())
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Header().Add("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(serverResponse{
-				Error: resp.err.Error(),
-			})
+			s.requestError(w, resp.err)
 			return
 		}
 
 		s.log.Info("Successfully created todo")
-
-		w.Header().Add("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(serverResponse{
-			Message: "Successfully created todo",
-			Value:   &resp.val,
-		})
+		s.requestSuccess(w, resp)
 		return
 	}
 }
 
-func (*HttpServer) handleGetTodo(w http.ResponseWriter, r *http.Request) {
-	panic("not implemented")
+func (s *HttpServer) handleGetTodo(w http.ResponseWriter, r *http.Request) {
+	todoId, err := getTodoIdFromRequest(r)
+	if err != nil {
+		s.requestError(w, err)
+		return
+	}
+
+	ctx, cancel, respch := processWithTimeout(r.Context(), func(respch chan response) {
+		val, err := s.repo.GetTodo(todoId)
+		respch <- response{
+			val: val,
+			err: err,
+		}
+	})
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+		s.requestTimeout(w)
+		return
+	case resp := <-respch:
+		if resp.err != nil {
+			s.requestError(w, resp.err)
+			return
+		}
+
+		s.log.Info("Successfully found todo")
+		s.requestSuccess(w, resp)
+		return
+	}
 }
 
-func (*HttpServer) handleUpdateTodo(w http.ResponseWriter, r *http.Request) {
-	panic("not implemented")
+func (s *HttpServer) handleUpdateTodo(w http.ResponseWriter, r *http.Request) {
+	todoId, err := getTodoIdFromRequest(r)
+	if err != nil {
+		s.requestError(w, err)
+		return
+	}
+
+	var todo todo.Todo
+	err = decodeRequestBody(r.Body, &todo)
+	if err != nil {
+		s.requestError(w, err)
+		return
+	}
+
+	ctx, cancel, respch := processWithTimeout(r.Context(), func(respch chan response) {
+		val, err := s.repo.UpdateTodo(todoId, &todo)
+		respch <- response{
+			val: val,
+			err: err,
+		}
+	})
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+		s.requestTimeout(w)
+		return
+	case resp := <-respch:
+		if resp.err != nil {
+			s.requestError(w, resp.err)
+			return
+		}
+
+		s.log.Info("Updated todo successfully")
+		s.requestSuccess(w, resp)
+	}
 }
 
-func (*HttpServer) handleDeleteTodo(w http.ResponseWriter, r *http.Request) {
-	panic("not implemented")
+func (s *HttpServer) handleDeleteTodo(w http.ResponseWriter, r *http.Request) {
+	todoId, err := getTodoIdFromRequest(r)
+	if err != nil {
+		s.requestError(w, err)
+	}
+
+	ctx, cancel, respch := processWithTimeout(r.Context(), func(respch chan response) {
+		err := s.repo.DeleteTodo(todoId)
+		respch <- response{
+			err: err,
+		}
+	})
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+		s.requestTimeout(w)
+		return
+	case resp := <-respch:
+		if resp.err != nil {
+			s.requestError(w, resp.err)
+		}
+
+		s.log.Info("Successfully deleted todo")
+		s.requestSuccessWithMessage(w, "Successfully deleted todo")
+	}
+}
+
+func (s *HttpServer) requestTimeout(w http.ResponseWriter) {
+	s.log.Error("request timed out")
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(serverResponse{
+		Error: "request timed out",
+	})
+}
+
+func (s *HttpServer) requestError(w http.ResponseWriter, err error) {
+	s.log.Error(err.Error())
+	w.WriteHeader(http.StatusInternalServerError)
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(serverResponse{
+		Error: err.Error(),
+	})
+}
+
+func (s *HttpServer) requestSuccess(w http.ResponseWriter, resp response) {
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(serverResponse{
+		Value: resp.val,
+	})
+}
+
+func (s *HttpServer) requestSuccessWithMessage(w http.ResponseWriter, message string) {
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(serverResponse{
+		Message: message,
+	})
+}
+
+func decodeRequestBody(r io.ReadCloser, data any) error {
+	err := json.NewDecoder(r).Decode(data)
+	defer r.Close()
+	return err
+}
+
+func processWithTimeout(parentCtx context.Context, fn func(respch chan response)) (context.Context, context.CancelFunc, chan response) {
+	ctx, cancel := context.WithTimeout(parentCtx, REQUEST_TIMEOUT)
+	respch := make(chan response)
+
+	go fn(respch)
+
+	return ctx, cancel, respch
+}
+
+func getTodoIdFromRequest(r *http.Request) (int, error) {
+	return strconv.Atoi(r.PathValue("todoId"))
 }

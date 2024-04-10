@@ -18,6 +18,6 @@ type NewTodo struct {
 type TodoRepository interface {
 	CreateTodo(newTodo *NewTodo) (*Todo, error)
 	GetTodo(id int) (*Todo, error)
-	UpdateTodo(todo *Todo) (*Todo, error)
+	UpdateTodo(id int, todo *Todo) (*Todo, error)
 	DeleteTodo(id int) error
 }
