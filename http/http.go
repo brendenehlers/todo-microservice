@@ -15,6 +15,13 @@ import (
 
 const (
 	REQUEST_TIMEOUT = time.Millisecond * 200
+	DEFAULT_ADDRESS = ":8080"
+)
+
+var (
+	ErrRequestTimedOut = fmt.Errorf("request timed out")
+	ErrInvalidRepo     = fmt.Errorf("invalid todo repository")
+	ErrInvalidLogger   = fmt.Errorf("invalid logger")
 )
 
 type HTTPServerConfig struct {
@@ -26,17 +33,17 @@ type HTTPServerConfig struct {
 
 func CreateHTTPServer(config *HTTPServerConfig) (*HttpServer, error) {
 	if config.Repo == nil {
-		return nil, fmt.Errorf("config.todoRepo == nil")
+		return nil, ErrInvalidRepo
 	}
 	if config.Log == nil {
-		return nil, fmt.Errorf("config.log == nil")
+		return nil, ErrInvalidLogger
 	}
 
 	if config.Ctx == nil {
 		config.Ctx = context.Background()
 	}
 	if config.Addr == "" {
-		config.Addr = ":8080"
+		config.Addr = DEFAULT_ADDRESS
 	}
 
 	handler := http.NewServeMux()
@@ -82,8 +89,8 @@ func (s *HttpServer) Run() {
 	s.ListenAndServe()
 }
 
-func (*HttpServer) Stop() {
-	panic("not implemented")
+func (s *HttpServer) Stop(ctx context.Context) {
+	s.Shutdown(ctx)
 }
 
 func (s *HttpServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
@@ -184,7 +191,7 @@ func (s *HttpServer) handleUpdateTodo(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		s.log.Info("Updated todo successfully")
+		s.log.Info("Successfully updated todo")
 		s.requestSuccess(w, resp)
 	}
 }
@@ -218,11 +225,11 @@ func (s *HttpServer) handleDeleteTodo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *HttpServer) requestTimeout(w http.ResponseWriter) {
-	s.log.Error("request timed out")
+	s.log.Error(ErrRequestTimedOut.Error())
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(serverResponse{
-		Error: "request timed out",
+		Error: ErrRequestTimedOut.Error(),
 	})
 }
 

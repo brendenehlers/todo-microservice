@@ -8,6 +8,12 @@ import (
 	"github.com/brendenehlers/todo-microservice/domain"
 )
 
+var (
+	ErrTodoDoesNotExist  = fmt.Errorf("todo does not exist")
+	ErrTodoAlreadyExists = fmt.Errorf("todo already exists")
+	ErrInvalidParameter  = fmt.Errorf("invalid function parameters")
+)
+
 func New(log domain.Logger) *InMemoryTodoRepository {
 	return &InMemoryTodoRepository{
 		todos: make(map[int]*domain.Todo),
@@ -21,11 +27,15 @@ type InMemoryTodoRepository struct {
 }
 
 func (r *InMemoryTodoRepository) CreateTodo(newTodo *domain.NewTodo) (*domain.Todo, error) {
+	if newTodo == nil {
+		return nil, ErrInvalidParameter
+	}
+
 	// TODO make this better
 	id := rand.Intn(10000)
 
 	if _, ok := r.todos[id]; ok {
-		return nil, fmt.Errorf("unexpected error with creating todo")
+		return nil, ErrTodoAlreadyExists
 	}
 
 	todo := &domain.Todo{
@@ -42,15 +52,19 @@ func (r *InMemoryTodoRepository) CreateTodo(newTodo *domain.NewTodo) (*domain.To
 func (r *InMemoryTodoRepository) GetTodo(id int) (*domain.Todo, error) {
 	todo, ok := r.todos[id]
 	if !ok {
-		return nil, fmt.Errorf("unable to find todo")
+		return nil, ErrTodoDoesNotExist
 	}
 
 	return todo, nil
 }
 
 func (r *InMemoryTodoRepository) UpdateTodo(id int, todo *domain.Todo) (*domain.Todo, error) {
+	if todo == nil {
+		return nil, ErrInvalidParameter
+	}
+
 	if _, ok := r.todos[id]; !ok {
-		return nil, fmt.Errorf("todo with given id does not exist")
+		return nil, ErrTodoDoesNotExist
 	}
 
 	r.todos[id].Done = todo.Done

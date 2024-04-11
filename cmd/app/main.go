@@ -13,12 +13,15 @@ func main() {
 	repo := memory.New(log)
 
 	ctx := context.Background()
-	server, _ := http.CreateHTTPServer(&http.HTTPServerConfig{
+	server, err := http.CreateHTTPServer(&http.HTTPServerConfig{
 		Addr: ":8080",
 		Repo: repo,
 		Ctx:  ctx,
 		Log:  log,
 	})
+	if err != nil {
+		panic(err)
+	}
 
 	server.Run()
 }
