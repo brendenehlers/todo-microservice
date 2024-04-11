@@ -8,11 +8,17 @@ import (
 
 	"github.com/brendenehlers/todo-microservice/domain"
 	"github.com/brendenehlers/todo-microservice/http/generated"
-	"github.com/google/uuid"
 )
 
+type GeneratedTodoRepository interface {
+	CreateTodo(newTodo *generated.CreateTodoJSONRequestBody) (*generated.Todo, error)
+	GetTodo(id *generated.TodoID) (*generated.Todo, error)
+	UpdateTodo(id *generated.TodoID, update *generated.UpdateTodoJSONRequestBody) (*generated.Todo, error)
+	DeleteTodo(id *generated.TodoID) error
+}
+
 func newAPI(
-	repo domain.TodoRepository,
+	repo GeneratedTodoRepository,
 	log domain.Logger,
 ) *api {
 	return &api{
@@ -22,7 +28,7 @@ func newAPI(
 }
 
 type api struct {
-	repo domain.TodoRepository
+	repo GeneratedTodoRepository
 	log  domain.Logger
 }
 
@@ -31,7 +37,7 @@ func (a *api) handler() http.Handler {
 }
 
 type response struct {
-	val *domain.Todo
+	val *generated.Todo
 	err error
 }
 
@@ -43,7 +49,7 @@ func (*api) GetStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *api) CreateTodo(w http.ResponseWriter, r *http.Request) {
-	var newTodo generated.CreateTodoJSONBody
+	var newTodo generated.CreateTodoJSONRequestBody
 	err := decodeRequestBody(r.Body, &newTodo)
 	defer r.Body.Close()
 	if err != nil {
@@ -51,9 +57,8 @@ func (api *api) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	domainNewTodo := convertGeneratedNewTodoToDomainNewTodo(&newTodo)
 	ctx, cancel, respch := processWithTimeout(r.Context(), func(respch chan response) {
-		todo, err := api.repo.CreateTodo(domainNewTodo)
+		todo, err := api.repo.CreateTodo(&newTodo)
 		respch <- response{
 			val: todo,
 			err: err,
@@ -79,7 +84,7 @@ func (api *api) CreateTodo(w http.ResponseWriter, r *http.Request) {
 
 func (api *api) GetTodo(w http.ResponseWriter, r *http.Request, todoId generated.TodoID) {
 	ctx, cancel, respch := processWithTimeout(r.Context(), func(respch chan response) {
-		val, err := api.repo.GetTodo(todoId.String())
+		val, err := api.repo.GetTodo(&todoId)
 		respch <- response{
 			val: val,
 			err: err,
@@ -104,7 +109,7 @@ func (api *api) GetTodo(w http.ResponseWriter, r *http.Request, todoId generated
 }
 
 func (api *api) UpdateTodo(w http.ResponseWriter, r *http.Request, todoId generated.TodoID) {
-	var todo domain.Todo
+	var todo generated.UpdateTodoJSONRequestBody
 	err := decodeRequestBody(r.Body, &todo)
 	if err != nil {
 		api.requestError(w, err)
@@ -112,7 +117,7 @@ func (api *api) UpdateTodo(w http.ResponseWriter, r *http.Request, todoId genera
 	}
 
 	ctx, cancel, respch := processWithTimeout(r.Context(), func(respch chan response) {
-		val, err := api.repo.UpdateTodo(todoId.String(), &todo)
+		val, err := api.repo.UpdateTodo(&todoId, &todo)
 		respch <- response{
 			val: val,
 			err: err,
@@ -137,7 +142,7 @@ func (api *api) UpdateTodo(w http.ResponseWriter, r *http.Request, todoId genera
 
 func (api *api) DeleteTodo(w http.ResponseWriter, r *http.Request, todoId generated.TodoID) {
 	ctx, cancel, respch := processWithTimeout(r.Context(), func(respch chan response) {
-		err := api.repo.DeleteTodo(todoId.String())
+		err := api.repo.DeleteTodo(&todoId)
 		respch <- response{
 			err: err,
 		}
@@ -181,12 +186,10 @@ func (api *api) requestError(w http.ResponseWriter, err error) {
 	})
 }
 
-func (api *api) requestSuccess(w http.ResponseWriter, todo *domain.Todo) {
-	genTodo, _ := covertDomainTodoToGeneratedTodo(todo)
-
+func (api *api) requestSuccess(w http.ResponseWriter, todo *generated.Todo) {
 	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(generated.TodoResponse{
-		Value: genTodo,
+		Value: todo,
 	})
 }
 
@@ -210,26 +213,4 @@ func processWithTimeout(parentCtx context.Context, fn func(respch chan response)
 	go fn(respch)
 
 	return ctx, cancel, respch
-}
-
-func convertGeneratedNewTodoToDomainNewTodo(newTodo *generated.CreateTodoJSONBody) *domain.NewTodo {
-	return &domain.NewTodo{
-		Description: *newTodo.Description,
-	}
-}
-
-func covertDomainTodoToGeneratedTodo(todo *domain.Todo) (*generated.Todo, error) {
-	uuidObj, err := uuid.Parse(todo.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	return &generated.Todo{
-		Id:          &uuidObj,
-		Done:        &todo.Done,
-		Description: &todo.Description,
-		DoneAt:      &todo.DoneAt,
-		CreatedAt:   &todo.CreatedAt,
-		UpdatedAt:   &todo.UpdatedAt,
-	}, nil
 }

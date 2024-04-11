@@ -26,13 +26,7 @@ paths:
       summary: Create a new todo
       operationId: createTodo
       requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                description:
-                  type: string
+        $ref: "#/components/requestBodies/CreateTodo"
       responses:
         '200':
           description: The newly created todo
@@ -62,6 +56,8 @@ paths:
       operationId: updateTodo
       parameters:
         - $ref: "#/components/parameters/TodoID"
+      requestBody:
+        $ref: "#/components/requestBodies/UpdateTodo"
       responses:
         '200':
           description: The updated contents of the todo
@@ -96,6 +92,25 @@ components:
         format: uuid
       required: true
       description: ID of the todo
+  requestBodies:
+    CreateTodo:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              description:
+                type: string
+    UpdateTodo:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              done:
+                type: boolean
+              description:
+                type: string
   schemas:
     Error:
       type: object

@@ -46,10 +46,30 @@ type TodoID = openapi_types.UUID
 // N500 defines model for 500.
 type N500 = Error
 
+// CreateTodo defines model for CreateTodo.
+type CreateTodo struct {
+	Description *string `json:"description,omitempty"`
+}
+
+// UpdateTodo defines model for UpdateTodo.
+type UpdateTodo struct {
+	Description *string `json:"description,omitempty"`
+	Done        *bool   `json:"done,omitempty"`
+}
+
 // CreateTodoJSONBody defines parameters for CreateTodo.
 type CreateTodoJSONBody struct {
 	Description *string `json:"description,omitempty"`
 }
 
+// UpdateTodoJSONBody defines parameters for UpdateTodo.
+type UpdateTodoJSONBody struct {
+	Description *string `json:"description,omitempty"`
+	Done        *bool   `json:"done,omitempty"`
+}
+
 // CreateTodoJSONRequestBody defines body for CreateTodo for application/json ContentType.
 type CreateTodoJSONRequestBody CreateTodoJSONBody
+
+// UpdateTodoJSONRequestBody defines body for UpdateTodo for application/json ContentType.
+type UpdateTodoJSONRequestBody UpdateTodoJSONBody

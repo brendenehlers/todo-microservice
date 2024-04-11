@@ -50,8 +50,10 @@ func CreateHTTPServer(config *HTTPServerConfig) (*HttpServer, error) {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	repoAdapter := newAdapter(config.Repo)
+
 	api := newAPI(
-		config.Repo,
+		repoAdapter,
 		config.Log,
 	)
 	r.Mount("/", api.handler())
