@@ -1,0 +1,148 @@
+openapi: 3.1.0
+
+info:
+  title: Todo Microservice
+  version: 0.0.1
+  description: A simple todo microservice
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server on port 8080
+
+paths:
+  /status:
+    get:
+      summary: Gets the status of the microservice
+      operationId: getStatus
+      responses:
+        '200':
+          description: The current status of the service
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+  /todo:
+    post:
+      summary: Create a new todo
+      operationId: createTodo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+      responses:
+        '200':
+          description: The newly created todo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodoResponse"
+        '500':
+          $ref: "#/components/responses/500"      
+  /todo/{todoId}:
+    get:
+      summary: Gets the todo with the givin id
+      operationId: getTodo
+      parameters:
+        - $ref: "#/components/parameters/TodoID"
+      responses:
+        '200':
+          description: The contents of the todo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodoResponse"
+        '500':
+          $ref: "#/components/responses/500"
+    put:
+      summary: Updates the todo with the provided ID
+      operationId: updateTodo
+      parameters:
+        - $ref: "#/components/parameters/TodoID"
+      responses:
+        '200':
+          description: The updated contents of the todo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodoResponse"
+        '500':
+          $ref: "#/components/responses/500"
+    delete:
+      summary: Deletes the todo with the provided ID
+      operationId: deleteTodo
+      parameters:
+        - $ref: "#/components/parameters/TodoID"
+      responses:
+        '200':
+          description: The updated contents of the todo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        '500':
+          $ref: "#/components/responses/500"
+
+components:
+  parameters:
+    TodoID:
+      in: path
+      name: todoId
+      schema:
+        type: string
+        format: uuid
+      required: true
+      description: ID of the todo
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    Status:
+      type: object
+      properties:
+        status:
+          type: string
+    Todo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        done:
+          type: boolean
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        doneAt:
+          type: string
+          format: date-time
+    TodoResponse:
+      type: object
+      properties:
+        value:
+          $ref: "#/components/schemas/Todo"
+        message:
+          type: string
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+  responses:
+    '500':
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+

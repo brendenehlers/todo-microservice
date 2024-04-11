@@ -20,5 +20,6 @@
 # Go workspace file
 go.work
 
-# OSX files
+# Misc files
 .DS_Store
+.vscode/
