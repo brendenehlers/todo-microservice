@@ -13,6 +13,7 @@ import (
 type GeneratedTodoRepository interface {
 	CreateTodo(newTodo *generated.CreateTodoJSONRequestBody) (*generated.Todo, error)
 	GetTodo(id *generated.TodoID) (*generated.Todo, error)
+	GetTodos() (*[]generated.Todo, error)
 	UpdateTodo(id *generated.TodoID, update *generated.UpdateTodoJSONRequestBody) (*generated.Todo, error)
 	DeleteTodo(id *generated.TodoID) error
 }
@@ -37,7 +38,7 @@ func (a *api) handler() http.Handler {
 }
 
 type response struct {
-	val *generated.Todo
+	val any
 	err error
 }
 
@@ -77,7 +78,7 @@ func (api *api) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		}
 
 		api.log.Info("Successfully created todo")
-		api.requestSuccess(w, resp.val)
+		api.sendTodoResponse(w, resp.val.(*generated.Todo))
 		return
 	}
 }
@@ -103,8 +104,33 @@ func (api *api) GetTodo(w http.ResponseWriter, r *http.Request, todoId generated
 		}
 
 		api.log.Info("Successfully found todo")
-		api.requestSuccess(w, resp.val)
+		api.sendTodoResponse(w, resp.val.(*generated.Todo))
 		return
+	}
+}
+
+func (api *api) GetTodos(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel, respch := processWithTimeout(r.Context(), func(respch chan response) {
+		val, err := api.repo.GetTodos()
+		respch <- response{
+			val: val,
+			err: err,
+		}
+	})
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+		api.requestTimeout(w)
+		return
+	case resp := <-respch:
+		if resp.err != nil {
+			api.requestError(w, resp.err)
+			return
+		}
+
+		api.log.Info("Successfully retrieved todos")
+		api.sendTodosResponse(w, resp.val.(*[]generated.Todo))
 	}
 }
 
@@ -136,7 +162,7 @@ func (api *api) UpdateTodo(w http.ResponseWriter, r *http.Request, todoId genera
 		}
 
 		api.log.Info("Successfully updated todo")
-		api.requestSuccess(w, resp.val)
+		api.sendTodoResponse(w, resp.val.(*generated.Todo))
 	}
 }
 
@@ -186,10 +212,17 @@ func (api *api) requestError(w http.ResponseWriter, err error) {
 	})
 }
 
-func (api *api) requestSuccess(w http.ResponseWriter, todo *generated.Todo) {
+func (api *api) sendTodoResponse(w http.ResponseWriter, todo *generated.Todo) {
 	w.Header().Add("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(generated.TodoResponse{
 		Value: todo,
+	})
+}
+
+func (api *api) sendTodosResponse(w http.ResponseWriter, todos *[]generated.Todo) {
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(generated.TodosResponse{
+		Value: todos,
 	})
 }
 

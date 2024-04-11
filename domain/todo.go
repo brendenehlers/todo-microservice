@@ -23,6 +23,7 @@ type UpdateTodo struct {
 type TodoRepository interface {
 	CreateTodo(newTodo *NewTodo) (*Todo, error)
 	GetTodo(id string) (*Todo, error)
+	GetTodos() (*[]Todo, error)
 	UpdateTodo(id string, todo *UpdateTodo) (*Todo, error)
 	DeleteTodo(id string) error
 }

@@ -38,6 +38,24 @@ func (a *adapter) GetTodo(id *generated.TodoID) (*generated.Todo, error) {
 	return covertDomainTodoToGeneratedTodo(domainTodo)
 }
 
+func (a *adapter) GetTodos() (*[]generated.Todo, error) {
+	domainTodos, err := a.repo.GetTodos()
+	if err != nil {
+		return nil, err
+	}
+
+	todos := make([]generated.Todo, 0)
+	for _, dTodo := range *domainTodos {
+		todo, err := covertDomainTodoToGeneratedTodo(&dTodo)
+		if err != nil {
+			return nil, err
+		}
+		todos = append(todos, *todo)
+	}
+
+	return &todos, nil
+}
+
 func (a *adapter) UpdateTodo(id *generated.TodoID, update *generated.UpdateTodoJSONRequestBody) (*generated.Todo, error) {
 	idStr := id.String()
 	domainUpdateTodo := convertGeneratedUpdateTodoToDomainUpdateTodo(update)

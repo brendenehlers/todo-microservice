@@ -40,6 +40,12 @@ type TodoResponse struct {
 	Value   *Todo   `json:"value,omitempty"`
 }
 
+// TodosResponse defines model for TodosResponse.
+type TodosResponse struct {
+	Message *string `json:"message,omitempty"`
+	Value   *[]Todo `json:"value,omitempty"`
+}
+
 // TodoID defines model for TodoID.
 type TodoID = openapi_types.UUID
 

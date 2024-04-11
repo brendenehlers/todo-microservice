@@ -28,6 +28,9 @@ type ServerInterface interface {
 	// Updates the todo with the provided ID
 	// (PUT /todo/{todoId})
 	UpdateTodo(w http.ResponseWriter, r *http.Request, todoId TodoID)
+	// Get all todos
+	// (GET /todos)
+	GetTodos(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -61,6 +64,12 @@ func (_ Unimplemented) GetTodo(w http.ResponseWriter, r *http.Request, todoId To
 // Updates the todo with the provided ID
 // (PUT /todo/{todoId})
 func (_ Unimplemented) UpdateTodo(w http.ResponseWriter, r *http.Request, todoId TodoID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get all todos
+// (GET /todos)
+func (_ Unimplemented) GetTodos(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -172,6 +181,21 @@ func (siw *ServerInterfaceWrapper) UpdateTodo(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateTodo(w, r, todoId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// GetTodos operation middleware
+func (siw *ServerInterfaceWrapper) GetTodos(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTodos(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -308,6 +332,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/todo/{todoId}", wrapper.UpdateTodo)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/todos", wrapper.GetTodos)
 	})
 
 	return r

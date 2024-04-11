@@ -36,6 +36,19 @@ paths:
                 $ref: "#/components/schemas/TodoResponse"
         '500':
           $ref: "#/components/responses/500"      
+  /todos:
+    get:
+      summary: Get all todos
+      operationId: getTodos
+      responses:
+        '200':
+          description: List of all todos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodosResponse"
+        '500':
+          $ref: "#/components/responses/500"
   /todo/{todoId}:
     get:
       summary: Gets the todo with the givin id
@@ -146,6 +159,15 @@ components:
       properties:
         value:
           $ref: "#/components/schemas/Todo"
+        message:
+          type: string
+    TodosResponse:
+      type: object
+      properties:
+        value:
+          type: array
+          items:
+            $ref: "#/components/schemas/Todo"
         message:
           type: string
     MessageResponse:

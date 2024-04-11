@@ -58,6 +58,16 @@ func (r *InMemoryTodoRepository) GetTodo(id string) (*domain.Todo, error) {
 	return todo, nil
 }
 
+func (r *InMemoryTodoRepository) GetTodos() (*[]domain.Todo, error) {
+	todos := make([]domain.Todo, 0)
+
+	for _, v := range r.todos {
+		todos = append(todos, *v)
+	}
+
+	return &todos, nil
+}
+
 func (r *InMemoryTodoRepository) UpdateTodo(id string, todo *domain.UpdateTodo) (*domain.Todo, error) {
 	if todo == nil {
 		return nil, ErrInvalidParameter
