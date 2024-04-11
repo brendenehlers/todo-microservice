@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/brendenehlers/todo-microservice"
+	"github.com/brendenehlers/todo-microservice/domain"
 )
 
 type Middleware func(handler http.Handler) http.Handler
 
-func RequestLogger(log todo.Logger, handler http.Handler) http.Handler {
+func RequestLogger(log domain.Logger, handler http.Handler) http.Handler {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		defer func() {

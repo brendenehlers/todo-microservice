@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/brendenehlers/todo-microservice"
+	"github.com/brendenehlers/todo-microservice/domain"
 )
 
 const (
@@ -19,9 +19,9 @@ const (
 
 type HTTPServerConfig struct {
 	Addr string
-	Repo todo.TodoRepository
+	Repo domain.TodoRepository
 	Ctx  context.Context
-	Log  todo.Logger
+	Log  domain.Logger
 }
 
 func CreateHTTPServer(config *HTTPServerConfig) (*HttpServer, error) {
@@ -62,8 +62,8 @@ func CreateHTTPServer(config *HTTPServerConfig) (*HttpServer, error) {
 
 type HttpServer struct {
 	http.Server
-	repo todo.TodoRepository
-	log  todo.Logger
+	repo domain.TodoRepository
+	log  domain.Logger
 }
 
 type serverResponse struct {
@@ -73,7 +73,7 @@ type serverResponse struct {
 }
 
 type response struct {
-	val *todo.Todo
+	val *domain.Todo
 	err error
 }
 
@@ -87,7 +87,7 @@ func (*HttpServer) Stop() {
 }
 
 func (s *HttpServer) handleCreateTodo(w http.ResponseWriter, r *http.Request) {
-	var newTodo todo.NewTodo
+	var newTodo domain.NewTodo
 	err := decodeRequestBody(r.Body, &newTodo)
 	if err != nil {
 		s.requestError(w, err)
@@ -158,7 +158,7 @@ func (s *HttpServer) handleUpdateTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var todo todo.Todo
+	var todo domain.Todo
 	err = decodeRequestBody(r.Body, &todo)
 	if err != nil {
 		s.requestError(w, err)

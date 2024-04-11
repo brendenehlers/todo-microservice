@@ -1,4 +1,4 @@
-package todo
+package domain
 
 type Logger interface {
 	Info(str string)

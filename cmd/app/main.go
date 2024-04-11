@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	log := &slogger.Slogger{}
+	log := slogger.New()
 	repo := memory.New(log)
 
 	ctx := context.Background()

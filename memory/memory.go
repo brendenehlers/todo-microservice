@@ -5,22 +5,22 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/brendenehlers/todo-microservice"
+	"github.com/brendenehlers/todo-microservice/domain"
 )
 
-func New(log todo.Logger) *InMemoryTodoRepository {
+func New(log domain.Logger) *InMemoryTodoRepository {
 	return &InMemoryTodoRepository{
-		todos: make(map[int]*todo.Todo),
+		todos: make(map[int]*domain.Todo),
 		log:   log,
 	}
 }
 
 type InMemoryTodoRepository struct {
-	todos map[int]*todo.Todo
-	log   todo.Logger
+	todos map[int]*domain.Todo
+	log   domain.Logger
 }
 
-func (r *InMemoryTodoRepository) CreateTodo(newTodo *todo.NewTodo) (*todo.Todo, error) {
+func (r *InMemoryTodoRepository) CreateTodo(newTodo *domain.NewTodo) (*domain.Todo, error) {
 	// TODO make this better
 	id := rand.Intn(10000)
 
@@ -28,7 +28,7 @@ func (r *InMemoryTodoRepository) CreateTodo(newTodo *todo.NewTodo) (*todo.Todo, 
 		return nil, fmt.Errorf("unexpected error with creating todo")
 	}
 
-	todo := &todo.Todo{
+	todo := &domain.Todo{
 		Id:          id,
 		Description: newTodo.Description,
 		CreatedAt:   time.Now(),
@@ -39,7 +39,7 @@ func (r *InMemoryTodoRepository) CreateTodo(newTodo *todo.NewTodo) (*todo.Todo, 
 	return todo, nil
 }
 
-func (r *InMemoryTodoRepository) GetTodo(id int) (*todo.Todo, error) {
+func (r *InMemoryTodoRepository) GetTodo(id int) (*domain.Todo, error) {
 	todo, ok := r.todos[id]
 	if !ok {
 		return nil, fmt.Errorf("unable to find todo")
@@ -48,7 +48,7 @@ func (r *InMemoryTodoRepository) GetTodo(id int) (*todo.Todo, error) {
 	return todo, nil
 }
 
-func (r *InMemoryTodoRepository) UpdateTodo(id int, todo *todo.Todo) (*todo.Todo, error) {
+func (r *InMemoryTodoRepository) UpdateTodo(id int, todo *domain.Todo) (*domain.Todo, error) {
 	if _, ok := r.todos[id]; !ok {
 		return nil, fmt.Errorf("todo with given id does not exist")
 	}
