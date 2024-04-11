@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/brendenehlers/todo-microservice/domain"
@@ -22,6 +21,7 @@ var (
 	ErrRequestTimedOut = fmt.Errorf("request timed out")
 	ErrInvalidRepo     = fmt.Errorf("invalid todo repository")
 	ErrInvalidLogger   = fmt.Errorf("invalid logger")
+	ErrNoPathValue     = fmt.Errorf("no path value found")
 )
 
 type HTTPServerConfig struct {
@@ -271,6 +271,10 @@ func processWithTimeout(parentCtx context.Context, fn func(respch chan response)
 	return ctx, cancel, respch
 }
 
-func getTodoIdFromRequest(r *http.Request) (int, error) {
-	return strconv.Atoi(r.PathValue("todoId"))
+func getTodoIdFromRequest(r *http.Request) (string, error) {
+	id := r.PathValue("todoId")
+	if id == "" {
+		return "", ErrNoPathValue
+	}
+	return id, nil
 }

@@ -2,10 +2,10 @@ package memory
 
 import (
 	"fmt"
-	"math/rand"
 	"time"
 
 	"github.com/brendenehlers/todo-microservice/domain"
+	"github.com/google/uuid"
 )
 
 var (
@@ -16,13 +16,13 @@ var (
 
 func New(log domain.Logger) *InMemoryTodoRepository {
 	return &InMemoryTodoRepository{
-		todos: make(map[int]*domain.Todo),
+		todos: make(map[string]*domain.Todo),
 		log:   log,
 	}
 }
 
 type InMemoryTodoRepository struct {
-	todos map[int]*domain.Todo
+	todos map[string]*domain.Todo
 	log   domain.Logger
 }
 
@@ -31,8 +31,8 @@ func (r *InMemoryTodoRepository) CreateTodo(newTodo *domain.NewTodo) (*domain.To
 		return nil, ErrInvalidParameter
 	}
 
-	// TODO make this better
-	id := rand.Intn(10000)
+	// random uuidV4
+	id := uuid.New().String()
 
 	if _, ok := r.todos[id]; ok {
 		return nil, ErrTodoAlreadyExists
@@ -49,7 +49,7 @@ func (r *InMemoryTodoRepository) CreateTodo(newTodo *domain.NewTodo) (*domain.To
 	return todo, nil
 }
 
-func (r *InMemoryTodoRepository) GetTodo(id int) (*domain.Todo, error) {
+func (r *InMemoryTodoRepository) GetTodo(id string) (*domain.Todo, error) {
 	todo, ok := r.todos[id]
 	if !ok {
 		return nil, ErrTodoDoesNotExist
@@ -58,7 +58,7 @@ func (r *InMemoryTodoRepository) GetTodo(id int) (*domain.Todo, error) {
 	return todo, nil
 }
 
-func (r *InMemoryTodoRepository) UpdateTodo(id int, todo *domain.Todo) (*domain.Todo, error) {
+func (r *InMemoryTodoRepository) UpdateTodo(id string, todo *domain.Todo) (*domain.Todo, error) {
 	if todo == nil {
 		return nil, ErrInvalidParameter
 	}
@@ -77,7 +77,7 @@ func (r *InMemoryTodoRepository) UpdateTodo(id int, todo *domain.Todo) (*domain.
 	return r.todos[id], nil
 }
 
-func (r *InMemoryTodoRepository) DeleteTodo(id int) error {
+func (r *InMemoryTodoRepository) DeleteTodo(id string) error {
 	delete(r.todos, id)
 
 	return nil
