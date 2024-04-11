@@ -4,6 +4,8 @@ A simple todo backend. Built to practice go and have a backend from creating tod
 
 The app is hard-coded to use port 8080.
 
+Run `scripts/gen-api.sh` before building the docker image if making changes to the API.
+
 Build the image:
 ```sh
 docker build -f ./DOCKERFILE  -t behlers/todo-app .

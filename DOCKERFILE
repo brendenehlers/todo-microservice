@@ -9,9 +9,6 @@ RUN go mod download
 # Bring in rest of the project
 COPY . ./
 
-# Build the generated types from the open api spec
-RUN ./scripts/gen-api.sh
-
 # Build the app for linux
 RUN CGO_ENABLED=0 GOOS=linux go build -o /todo-app ./cmd/app/main.go 
 
