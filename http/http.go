@@ -47,10 +47,11 @@ func CreateHTTPServer(config *HTTPServerConfig) (*HttpServer, error) {
 	}
 
 	handler := http.NewServeMux()
+	mw := middleware{log: config.Log}
 	server := &HttpServer{
 		Server: http.Server{
 			Addr:    config.Addr,
-			Handler: RequestLogger(config.Log, handler),
+			Handler: mw.requestLogger(mw.recover(handler)),
 			BaseContext: func(l net.Listener) context.Context {
 				return config.Ctx
 			},
